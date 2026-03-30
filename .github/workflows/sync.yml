@@ -1,0 +1,48 @@
+name: Sync External Files
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Запуск каждые 6 часов (можно изменить)
+  workflow_dispatch: # Возможность запустить вручную кнопкой
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Получаем доступ к вашему репозиторию
+      - name: Checkout my repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+
+      # 2. Скачиваем внешний репозиторий во временную папку
+      - name: Clone external repo
+        run: |
+          git clone --depth 1 https://github.com/zieng2/vless_lite.txt.git temp_external
+
+      # 3. Копируем нужные файлы
+      - name: Copy files
+        run: |
+          # Создаем папку назначения, если её нет
+          mkdir -p target_folder
+          
+          # КОМАНДА КОПИРОВАНИЯ (измените под себя):
+          # Копируем конкретный файл из временной папки в папку назначения
+          cp temp_external/path/to/vless_lite.txt target_folder/vless.txt
+          
+          # Пример копирования всей папки:
+          # cp -r temp_external/docs/* target_folder/docs/
+
+      # 4. Настраиваем автора коммита
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      # 5. Сохраняем изменения
+      - name: Commit and Push
+        run: |
+          git add .
+          # Проверяем, есть ли изменения, чтобы не делать пустых коммитов
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync: update files" && git push)
